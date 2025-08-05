@@ -53,6 +53,10 @@ summary_df = pd.DataFrame({
     "Varlık Sınıfı": asset_columns_clean,
     "Toplam Flow (mn)": total_flows.values / 1e6
 }).sort_values(by="Toplam Flow (mn)", ascending=False)
+total_sum_mn = summary_df["Toplam Flow (mn)"].sum()
+
+
+
 
 # --------------------------
 # 📈 Grafik
@@ -61,8 +65,8 @@ fig = px.bar(
     summary_df,
     x="Varlık Sınıfı",
     y="Toplam Flow (mn)",
-    title=f"{selected_pysh} - {selected_range} Net Fon Akımı",
-    color_discrete_sequence=["#398ab6"]
+    title=f"{selected_pysh} - {selected_range} Net Fon Akımı (Toplam: {total_sum_mn:.1f} mn TL)",
+    color_discrete_sequence=["#8cc5e3"]
 )
 
 fig.update_layout(
@@ -78,4 +82,5 @@ fig.update_layout(
 # --------------------------
 st.title("Fon Akımları Dashboard")
 st.plotly_chart(fig, use_container_width=True)
+
 
