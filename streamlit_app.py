@@ -1,22 +1,36 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px  # 🔧 eksik olan bu
+import plotly.express as px
 import gdown
 import os
+from datetime import datetime, timedelta
 
+# --------------------------
+# 📅 Tarih Seçici
+# --------------------------
+t_date = st.sidebar.date_input("Veri Tarihi Seçin", value=datetime.today())
+t_date = datetime.combine(t_date, datetime.min.time())
+dates = {
+    "t": t_date,
+    "t7": t_date - timedelta(days=7),
+    "t28": t_date - timedelta(days=28)
+}
 
+# --------------------------
+# 📦 Veri Yükleme
+# --------------------------
 @st.cache_data
+
 def load_data():
-    url_id = "1ZptN78nnE4i-YTDvcy0DiUtTQ5SWDJJ7"  # kendi dosya ID'ni buraya yaz
+    url_id = "1ZptN78nnE4i-YTDvcy0DiUtTQ5SWDJJ7"  # GDrive dosya ID
     url = f"https://drive.google.com/uc?id={url_id}"
     output = "main_df.pkl"
 
-    if not os.path.exists(output):  # sadece ilk sefer indirir
+    if not os.path.exists(output):
         gdown.download(url, output, quiet=False)
     return pd.read_pickle(output)
 
 main_df = load_data()
-
 
 # --------------------------
 # 🔍 Filtreleme ayarları
@@ -53,49 +67,32 @@ summary_df = pd.DataFrame({
     "Varlık Sınıfı": asset_columns_clean,
     "Toplam Flow (mn)": total_flows.values / 1e6
 }).sort_values(by="Toplam Flow (mn)", ascending=False)
+
 total_sum_mn = summary_df["Toplam Flow (mn)"].sum()
 
-
-
-
 # --------------------------
-# 📈 Grafik
+# 📊 Grafik
 # --------------------------
 fig = px.bar(
     summary_df,
     x="Varlık Sınıfı",
     y="Toplam Flow (mn)",
     title=f"{selected_pysh} - {selected_range} Net Fon Akımı (Toplam: {total_sum_mn:,.1f} mn TL)",
-    color_discrete_sequence=["#191970"]
+    color_discrete_sequence=["#8cc5e3"]
 )
 
 fig.update_layout(
-    title_font=dict(size=20, family="Segoe UI Semibold", color="black"),
     xaxis_title="Varlık Sınıfı",
     yaxis_title="Toplam Flow (mn)",
     yaxis_tickformat=",.0f",
-    xaxis=dict(
-        tickfont=dict(size=13, family="Segoe UI Semibold", color="black")
-    ),
-    yaxis=dict(
-        tickfont=dict(size=13, family="Segoe UI Semibold", color="black")
-    ),
-    font=dict(
-        size=13,
-        family="Segoe UI",
-        color="black"
-    ),
     plot_bgcolor="#f7f7f7",
-    paper_bgcolor="#ffffff"
+    paper_bgcolor="#ffffff",
+    xaxis_tickfont=dict(size=13, family="Arial", color="#222222", weight="bold"),
+    yaxis_tickfont=dict(size=13, family="Arial", color="#222222", weight="bold")
 )
 
 # --------------------------
-# 🖥️ Sayfa Gösterimi
+# 🔤 Sayfa Gösterimi
 # --------------------------
 st.title("Fon Akımları Dashboard")
 st.plotly_chart(fig, use_container_width=True)
-
-
-
-
-
