@@ -4,7 +4,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import requests
-import io
+import os
 from datetime import datetime, timedelta
 
 # --------------------------
@@ -165,3 +165,4 @@ if start:
     )
 
     st.plotly_chart(fig2, use_container_width=True)
+
