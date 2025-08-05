@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import requests
@@ -31,22 +32,92 @@ def download_takasbank_excel(t_date: datetime):
     return dfs["t"], dfs["t7"], dfs["t28"]
 
 # --------------------------
-# 🎛️ Sidebar Ayarları
+# 📦 PYŞ fon akım verisi
 # --------------------------
-st.sidebar.header("📅 Takasbank Veri Seçimi")
+@st.cache_data
+def load_main_data():
+    url_id = "1ZptN78nnE4i-YTDvcy0DiUtTQ5SWDJJ7"
+    url = f"https://drive.google.com/uc?id={url_id}"
+    output = "main_df.pkl"
+
+    if not os.path.exists(output):
+        import gdown
+        gdown.download(url, output, quiet=False)
+    return pd.read_pickle(output)
+
+# --------------------------
+# 🎛️ Sidebar
+# --------------------------
+st.sidebar.header("Filtreler")
+
+# PYŞ Dashboard için filtreler
+main_df = load_main_data()
+main_df["Tarih"] = pd.to_datetime(main_df["Tarih"])
+asset_columns = [col for col in main_df.columns if col.endswith("_TL")]
+asset_columns_clean = [col.replace("_TL", "") for col in asset_columns]
+
+pysh_list = sorted(main_df["PYŞ"].dropna().unique())
+range_dict = {
+    "1 Hafta": 5,
+    "1 Ay": 22,
+    "3 Ay": 66,
+    "6 Ay": 126,
+    "1 Yıl": 252
+}
+
+selected_pysh = st.sidebar.selectbox("PYŞ seçin", pysh_list)
+selected_range = st.sidebar.selectbox("Zaman aralığı", list(range_dict.keys()))
+day_count = range_dict[selected_range]
+
+# Takasbank için tarih
+st.sidebar.markdown("---")
+st.sidebar.subheader("📅 Takasbank Tarih Seçimi")
 selected_date = st.sidebar.date_input("Tarih seç", value=datetime.today())
 start = st.sidebar.button("📥 Veriyi Getir ve Göster")
 
 # --------------------------
-# 🚀 Başla Butonuna Basıldıysa
+# 🖥️ Sayfa Başlığı
+# --------------------------
+st.title("Fon Akımları Dashboard")
+
+# --------------------------
+# PYŞ Grafiği
+# --------------------------
+last_dates = main_df["Tarih"].drop_duplicates().sort_values(ascending=False).head(day_count)
+pysh_df = main_df[(main_df["PYŞ"] == selected_pysh) & (main_df["Tarih"].isin(last_dates))]
+total_flows = pysh_df[asset_columns].sum()
+
+summary_df = pd.DataFrame({
+    "Varlık Sınıfı": asset_columns_clean,
+    "Toplam Flow (mn)": total_flows.values / 1e6
+}).sort_values(by="Toplam Flow (mn)", ascending=False)
+
+total_sum_mn = summary_df["Toplam Flow (mn)"].sum()
+fig1 = px.bar(
+    summary_df,
+    x="Varlık Sınıfı",
+    y="Toplam Flow (mn)",
+    title=f"{selected_pysh} - {selected_range} Net Fon Akımı (Toplam: {total_sum_mn:,.0f} mn TL)",
+    color_discrete_sequence=["#8cc5e3"]
+)
+fig1.update_layout(
+    xaxis_title="Varlık Sınıfı",
+    yaxis_title="Toplam Flow (mn)",
+    yaxis_tickformat=",.0f",
+    plot_bgcolor="#f7f7f7",
+    paper_bgcolor="#ffffff",
+    xaxis_tickfont=dict(weight="bold"),
+    title_font=dict(size=18)
+)
+st.plotly_chart(fig1, use_container_width=True)
+
+# --------------------------
+# Takasbank Grafiği
 # --------------------------
 if start:
     st.write(f"⏳ {selected_date.strftime('%Y-%m-%d')} için veriler indiriliyor...")
     t_df, t7_df, t28_df = download_takasbank_excel(selected_date)
 
-    # --------------------------
-    # 🔎 Filtrele & Hazırla
-    # --------------------------
     main_items = [
         "Hisse Senedi", "Devlet Tahvili", "Finansman Bonosu", "Kamu Dış Borçlanma Araçları",
         "Özel Sektör Dış Borçlanma Araçları", "Takasbank Para Piyasası İşlemleri",
@@ -74,46 +145,23 @@ if start:
     df_percent["Aylık Değişim"] = (df_percent["t"] - df_percent["t28"]) * 10000
     df_percent = df_percent.round(1)
 
-    # --------------------------
-    # 📈 Grafik
-    # --------------------------
-    plot_data = df_percent[["Haftalık Değişim", "Aylık Değişim"]]
-    t_amount_billion = df.drop("TOPLAM")["t"] / 1e9
-
-    fig, ax1 = plt.subplots(figsize=(12, 10))
-    plot_data.plot(
-        kind="barh",
-        ax=ax1,
-        width=0.6,
-        color={"Haftalık Değişim": "#162336", "Aylık Değişim": "#cc171d"}
+    plot_data = df_percent[["Haftalık Değişim", "Aylık Değişim"]].reset_index().melt(id_vars=df_percent.index.name, var_name="Dönem", value_name="bps")
+    fig2 = px.bar(
+        plot_data,
+        x="bps",
+        y=df_percent.index.name,
+        color="Dönem",
+        orientation="h",
+        title=f"Takasbank Varlık Dağılımı Değişimi - {selected_date.strftime('%d %B %Y')}",
+        color_discrete_map={"Haftalık Değişim": "#162336", "Aylık Değişim": "#cc171d"}
+    )
+    fig2.update_layout(
+        xaxis_title="Değişim (bps)",
+        yaxis_title="Varlık Sınıfı",
+        plot_bgcolor="#f7f7f7",
+        paper_bgcolor="#ffffff",
+        title_font=dict(size=18),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    ax1.set_title(f"Varlık Sınıfında Değişim ({selected_date.strftime('%d %B %Y')})", fontsize=16)
-    ax1.set_xlabel("Değişim (bps)", fontsize=12)
-    ax1.set_ylabel("Varlık Sınıfı", fontsize=12)
-    ax1.grid(axis="x", linestyle="--", alpha=0.6)
-    ax1.legend(loc="lower right")
-    ax1.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.0f'))
-    ax1.invert_yaxis()
-
-    # 🔵 Noktalar: Varlık büyüklüğü
-    ax2 = ax1.twiny()
-    ax2.scatter(t_amount_billion.values, range(len(t_amount_billion)), color="royalblue", marker="o")
-    ax2.set_xlabel("Büyüklük (Milyar TL)", fontsize=12)
-    ax2.set_xlim(0, t_amount_billion.max() * 1.3)
-    ax2.set_yticks(range(len(t_amount_billion)))
-    ax2.set_yticklabels(df_percent.index.tolist())
-
-    for i, value in enumerate(t_amount_billion.values):
-        label = f"{int(round(value)):,}".replace(",", ".")
-        ax2.text(
-            value * 1.05,
-            i,
-            label,
-            va='center',
-            fontsize=11,
-            color="#355765",
-            bbox=dict(boxstyle="round,pad=0.1", facecolor="#FFFFFF90", edgecolor="none")
-        )
-
-    st.pyplot(fig)
+    st.plotly_chart(fig2, use_container_width=True)
