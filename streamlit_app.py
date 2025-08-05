@@ -66,7 +66,7 @@ fig = px.bar(
     x="Varlık Sınıfı",
     y="Toplam Flow (mn)",
     title=f"{selected_pysh} - {selected_range} Net Fon Akımı (Toplam: {total_sum_mn:,.1f} mn TL)",
-    color_discrete_sequence=["#8cc5e3"]
+    color_discrete_sequence=["#191970"]
 )
 
 fig.update_layout(
@@ -82,6 +82,7 @@ fig.update_layout(
 # --------------------------
 st.title("Fon Akımları Dashboard")
 st.plotly_chart(fig, use_container_width=True)
+
 
 
 
