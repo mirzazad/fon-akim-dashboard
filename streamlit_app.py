@@ -70,9 +70,21 @@ fig = px.bar(
 )
 
 fig.update_layout(
+    title_font=dict(size=20, family="Segoe UI Semibold", color="black"),
     xaxis_title="Varlık Sınıfı",
     yaxis_title="Toplam Flow (mn)",
     yaxis_tickformat=",.0f",
+    xaxis=dict(
+        tickfont=dict(size=13, family="Segoe UI Semibold", color="black")
+    ),
+    yaxis=dict(
+        tickfont=dict(size=13, family="Segoe UI Semibold", color="black")
+    ),
+    font=dict(
+        size=13,
+        family="Segoe UI",
+        color="black"
+    ),
     plot_bgcolor="#f7f7f7",
     paper_bgcolor="#ffffff"
 )
@@ -82,6 +94,7 @@ fig.update_layout(
 # --------------------------
 st.title("Fon Akımları Dashboard")
 st.plotly_chart(fig, use_container_width=True)
+
 
 
 
