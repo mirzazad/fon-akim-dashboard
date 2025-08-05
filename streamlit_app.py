@@ -4,6 +4,32 @@ import plotly.express as px
 import gdown
 import os
 from datetime import datetime, timedelta
+import requests
+import io
+
+@st.cache_data
+def download_takasbank_excel(t_date: datetime):
+    fon_grubu = "F"      # Yatırım fonları
+    fon_turu = "99999"   # Tüm türler
+    key = "rT4AQ2R2lXyX-Ys9LzTkPbJ8szIKc4w1xwMbqV-1v984zpEau4bixJOrFrmS9sM_0"
+
+    dates = {
+        "t": t_date,
+        "t7": t_date - timedelta(days=7),
+        "t28": t_date - timedelta(days=28)
+    }
+
+    dfs = {}
+    for label, date in dates.items():
+        date_str = date.strftime("%Y%m%d")
+        url = f"https://www.takasbank.com.tr/plugins/ExcelExportPortfoyStatistics?reportType=P&type={fon_grubu}&fundType={fon_turu}&endDate={date_str}&startDate={date_str}&key={key}&lang=T&language=tr"
+
+        response = requests.get(url)
+        df = pd.read_excel(io.BytesIO(response.content))
+        dfs[label] = df
+
+    return dfs["t"], dfs["t7"], dfs["t28"]
+
 
 # --------------------------
 # 📅 Tarih Seçici
@@ -96,3 +122,4 @@ fig.update_layout(
 # --------------------------
 st.title("Fon Akımları Dashboard")
 st.plotly_chart(fig, use_container_width=True)
+
