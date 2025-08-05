@@ -1,6 +1,4 @@
 streamlit
 pandas
+plotly
 requests
-matplotlib
-openpyxl
-os
