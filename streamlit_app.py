@@ -84,3 +84,4 @@ fig.update_layout(
 # 🖥️ Göster
 st.title("Fon Akımları Dashboard")
 st.plotly_chart(fig, use_container_width=True)
+
